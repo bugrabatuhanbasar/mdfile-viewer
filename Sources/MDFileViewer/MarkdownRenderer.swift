@@ -195,21 +195,21 @@ private func escapeAttribute(_ s: String) -> String {
 }
 
 private func slugify(_ s: String) -> String {
-    let lowered = s.lowercased()
+    // Matches github-slugger: lowercase, drop chars that aren't letters,
+    // digits, whitespace, hyphens, or underscores, then replace each
+    // whitespace character with a single hyphen — WITHOUT collapsing
+    // consecutive hyphens. This keeps our heading ids compatible with the
+    // in-document `#fragment` links most authors write.
     var out = ""
-    var lastWasDash = false
-    for scalar in lowered.unicodeScalars {
-        if CharacterSet.alphanumerics.contains(scalar) {
+    let space = CharacterSet.whitespacesAndNewlines
+    for scalar in s.lowercased().unicodeScalars {
+        if space.contains(scalar) {
+            out.append("-")
+        } else if CharacterSet.alphanumerics.contains(scalar)
+                  || scalar == "-" || scalar == "_" {
             out.unicodeScalars.append(scalar)
-            lastWasDash = false
-        } else if scalar == " " || scalar == "-" || scalar == "_" {
-            if !lastWasDash && !out.isEmpty {
-                out.append("-")
-                lastWasDash = true
-            }
         }
     }
-    while out.hasSuffix("-") { out.removeLast() }
     return out.isEmpty ? "section" : out
 }
 

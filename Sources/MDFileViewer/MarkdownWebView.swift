@@ -67,8 +67,32 @@ final class MarkdownWebCoordinator: NSObject, WKNavigationDelegate, WKScriptMess
         let js = """
         window.__spySuppressUntil = Date.now() + 900;
         (function(){
-          var id = \(encoded);
-          var el = document.getElementById(id) || document.querySelector('[name="' + id + '"]');
+          var frag = \(encoded);
+          function norm(s){
+            try {
+              return s.toLowerCase()
+                      .normalize('NFC')
+                      .replace(/[^\\p{L}\\p{N}\\s\\-_]/gu, '')
+                      .replace(/\\s+/g, '-');
+            } catch(e) {
+              return s.toLowerCase().replace(/[^a-z0-9\\s\\-_]/g, '').replace(/\\s+/g, '-');
+            }
+          }
+          var el = document.getElementById(frag)
+                || document.querySelector('[name="' + CSS.escape(frag) + '"]');
+          if (!el) {
+            var normFrag = norm(frag);
+            var collapsed = normFrag.replace(/-+/g, '-');
+            var hs = document.querySelectorAll('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]');
+            for (var i = 0; i < hs.length; i++) {
+              var id = hs[i].id;
+              if (id === normFrag || id === collapsed) { el = hs[i]; break; }
+              var slug = norm(hs[i].textContent || '');
+              if (slug === normFrag || slug.replace(/-+/g, '-') === collapsed) {
+                el = hs[i]; break;
+              }
+            }
+          }
           if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
         })();
         """
