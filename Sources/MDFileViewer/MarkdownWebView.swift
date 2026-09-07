@@ -51,6 +51,7 @@ final class MarkdownWebCoordinator: NSObject, WKNavigationDelegate, WKScriptMess
         let decoded = fragment.removingPercentEncoding ?? fragment
         let encoded = jsString(decoded)
         let js = """
+        window.__spySuppressUntil = Date.now() + 900;
         (function(){
           var id = \(encoded);
           var el = document.getElementById(id) || document.querySelector('[name="' + id + '"]');
@@ -78,6 +79,7 @@ private let scrollSpyScript = """
   var current = null;
   function report(id){
     if (!id || id === current) return;
+    if (window.__spySuppressUntil && Date.now() < window.__spySuppressUntil) return;
     current = id;
     try { window.webkit.messageHandlers.activeHeading.postMessage(id); } catch(e){}
   }
@@ -146,7 +148,13 @@ struct MarkdownWebView: NSViewRepresentable {
         }
         if let id = scrollToID, scrollNonce != context.coordinator.lastScrollNonce {
             context.coordinator.lastScrollNonce = scrollNonce
-            let js = "var el=document.getElementById(\(jsString(id))); if(el){el.scrollIntoView({behavior:'smooth', block:'start'});}"
+            let js = """
+            window.__spySuppressUntil = Date.now() + 900;
+            (function(){
+              var el = document.getElementById(\(jsString(id)));
+              if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+            })();
+            """
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
     }
