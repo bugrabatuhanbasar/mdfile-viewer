@@ -15,51 +15,21 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: .constant(showSidebar ? .all : .detailOnly)) {
-            ScrollViewReader { proxy in
-                List {
-                    Section {
-                        ForEach(Array(toc.enumerated()), id: \.element.id) { index, item in
-                            TOCRow(item: item, isSelected: activeID == item.id) {
-                                activeID = item.id
-                                let nextNonce = (scrollRequest?.nonce ?? 0) &+ 1
-                                scrollRequest = ScrollRequest(id: item.id, nonce: nextNonce)
-                            }
-                            .padding(.top, index == 0 ? 8 : 0)
-                            .id(item.id)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                        }
-                    } header: {
-                        Text("Contents")
-                            .padding(.bottom, 4)
-                    }
-                }
-                .listStyle(.sidebar)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 360)
-                .onChange(of: activeID) { _, newID in
-                    guard let id = newID else { return }
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        proxy.scrollTo(id, anchor: .center)
-                    }
-                }
+        HSplitView {
+            if showSidebar {
+                sidebar
+                    .frame(minWidth: 260, idealWidth: 320, maxWidth: 500)
+                    .layoutPriority(0)
             }
-        } detail: {
-            MarkdownWebView(
-                html: html,
-                scrollToID: scrollRequest?.id,
-                scrollNonce: scrollRequest?.nonce ?? 0,
-                onActiveHeadingChange: { id in
-                    if activeID != id { activeID = id }
-                }
-            )
-            .background(Color(NSColor.textBackgroundColor))
+            detail
+                .frame(minWidth: 480)
+                .layoutPriority(1)
         }
+        .frame(minWidth: 720, minHeight: 480)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button {
-                    withAnimation { showSidebar.toggle() }
+                    withAnimation(.easeInOut(duration: 0.2)) { showSidebar.toggle() }
                 } label: {
                     Image(systemName: "sidebar.leading")
                 }
@@ -68,6 +38,49 @@ struct ContentView: View {
         }
         .onAppear(perform: rebuild)
         .onChange(of: document.text) { _, _ in rebuild() }
+    }
+
+    private var sidebar: some View {
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    ForEach(Array(toc.enumerated()), id: \.element.id) { index, item in
+                        TOCRow(item: item, isSelected: activeID == item.id) {
+                            activeID = item.id
+                            let nextNonce = (scrollRequest?.nonce ?? 0) &+ 1
+                            scrollRequest = ScrollRequest(id: item.id, nonce: nextNonce)
+                        }
+                        .padding(.top, index == 0 ? 8 : 0)
+                        .id(item.id)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                } header: {
+                    Text("Contents")
+                        .padding(.bottom, 4)
+                }
+            }
+            .listStyle(.sidebar)
+            .onChange(of: activeID) { _, newID in
+                guard let id = newID else { return }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
+        }
+    }
+
+    private var detail: some View {
+        MarkdownWebView(
+            html: html,
+            scrollToID: scrollRequest?.id,
+            scrollNonce: scrollRequest?.nonce ?? 0,
+            onActiveHeadingChange: { id in
+                if activeID != id { activeID = id }
+            }
+        )
+        .background(Color(NSColor.textBackgroundColor))
     }
 
     private func rebuild() {
