@@ -8,11 +8,13 @@ No Electron. No background daemons. One small SwiftUI app that opens documents l
 
 - **GitHub-flavored Markdown** — tables, task lists, strikethrough, fenced code blocks
 - **Syntax highlighting** for code blocks via bundled [highlight.js](https://highlightjs.org/) (offline, no network)
-- **Auto light/dark theme** that follows the system appearance
 - **Table-of-contents sidebar** built from the document's headings; click to jump
-- **In-document anchor links** (`[Section](#section)`) scroll instead of prompting to open a file
+- **Scroll-spy** — the sidebar highlights (and follows) the section you're currently reading
+- **Light / Dark / System appearance** with a persistent toggle in the toolbar; both the sidebar and the rendered content update together
+- **In-document anchor links** (`[Section](#section)`) scroll instead of prompting to open a file, with fuzzy matching for author-generated slugs (GitHub-style, Pandoc, Hugo, …)
 - **External links** (http/https/mailto) open in your default browser
 - **Read-only** — never modifies your file
+- **Custom app icon** — the purple document icon shows up in Finder, the Dock, and the *Open With* menu
 - **Native `.app` bundle** — appears in Finder's *Open With* menu, can be set as the default handler for `.md`
 
 ## Requirements
@@ -59,9 +61,11 @@ From then on, double-clicking any `.md` file opens it in MDFile Viewer.
 ## Usage
 
 - **Open a file:** double-click in Finder, or `File → Open…` in the app.
-- **Jump to a heading:** click an entry in the sidebar.
-- **Toggle the sidebar:** the sidebar icon in the toolbar.
-- **Follow a link:** in-document (`#anchor`) links scroll; web links open in your default browser.
+- **Jump to a heading:** click any entry in the sidebar table of contents.
+- **Toggle the sidebar:** the sidebar icon in the toolbar (top-left).
+- **Change appearance:** the sun/moon icon in the toolbar (top-right) — pick System, Light, or Dark. The choice is remembered.
+- **Follow a link:** in-document `#anchor` links scroll to the heading; web links open in your default browser.
+- **Resize the split:** drag the divider between the sidebar and content.
 
 ## Project layout
 
@@ -69,19 +73,21 @@ From then on, double-clicking any `.md` file opens it in MDFile Viewer.
 mdfile-viewer/
 ├── Package.swift               # SwiftPM manifest (depends on apple/swift-markdown)
 ├── Sources/MDFileViewer/
-│   ├── MDFileViewerApp.swift   # @main, DocumentGroup scene
+│   ├── MDFileViewerApp.swift   # @main, DocumentGroup scene, default window size
 │   ├── MarkdownDocument.swift  # Read-only FileDocument for .md
-│   ├── ContentView.swift       # NavigationSplitView with TOC + WebView
-│   ├── MarkdownRenderer.swift  # swift-markdown AST → HTML + TOC extraction
-│   ├── MarkdownWebView.swift   # WKWebView wrapper, anchor + external link handling
+│   ├── ContentView.swift       # HSplitView: TOC sidebar + WebView, appearance menu
+│   ├── MarkdownRenderer.swift  # swift-markdown AST → HTML + GitHub-compatible slugs
+│   ├── MarkdownWebView.swift   # WKWebView wrapper, scroll-spy, anchor + external link handling, theme injection
 │   ├── HTMLTemplate.swift      # Loads Resources/template.html
 │   └── Resources/
-│       ├── template.html
-│       ├── styles.css          # GitHub-like theme, light/dark variants
-│       └── highlight/          # highlight.min.js + github(-dark) themes
+│       ├── template.html       # Wraps rendered HTML, wires theme + highlight.js
+│       ├── styles.css          # GitHub-like theme, light + dark variants (data-theme aware)
+│       └── highlight/          # highlight.min.js + github / github-dark themes
+├── assets/
+│   └── AppIcon.png             # 1024×1024 icon source (flattened, opaque)
 ├── scripts/
 │   ├── Info.plist              # Bundle metadata + .md UTI declaration
-│   └── build-app.sh            # Compile, assemble .app, ad-hoc codesign, optional install
+│   └── build-app.sh            # Compile, generate .icns, assemble .app, ad-hoc codesign, optional install
 ├── test-fixtures/
 │   └── sample.md               # Rich sample covering all supported features
 └── README.md
@@ -89,10 +95,12 @@ mdfile-viewer/
 
 ## Customization
 
+- **App icon:** replace `assets/AppIcon.png` with any square PNG (1024×1024 recommended). The build script regenerates `.icns` at every build. For best results the PNG should be opaque — transparent corners can cause a white halo in some macOS contexts.
 - **App name / bundle id:** edit `scripts/Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleIdentifier`). Match the executable name in `scripts/build-app.sh` if you rename it.
 - **Theme colors:** `Sources/MDFileViewer/Resources/styles.css` — CSS variables are declared at the top for both light and dark schemes.
 - **Highlight theme:** swap the two files under `Resources/highlight/` for any other pair of themes from the [highlight.js CDN](https://cdnjs.com/libraries/highlight.js) and keep the same filenames.
 - **Additional file extensions:** add them to `UTImportedTypeDeclarations` → `public.filename-extension` in `scripts/Info.plist`.
+- **Default window size / minimum size:** `Sources/MDFileViewer/MDFileViewerApp.swift` — `.defaultSize` and the `.frame(minWidth:minHeight:)` on `ContentView`.
 
 ## Development
 
@@ -113,14 +121,23 @@ Note: `swift run` produces a bare executable that doesn't behave like a proper d
 
 Issues and pull requests are welcome. Some ideas that would make good first contributions:
 
-- Custom app icon (`.icns`) shipped in `Resources/`
 - Print / Export to PDF
 - Configurable font size / max content width
-- Diagrams (Mermaid, KaTeX) rendered inline
-- Universal binary + notarization workflow
+- Diagrams (Mermaid) and math (KaTeX) rendered inline
+- Front-matter (YAML/TOML) rendered as a metadata card
+- Search / find-in-document
+- Universal binary + notarization workflow, signed release DMG
 
 ## License
 
 [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — see [LICENSE](LICENSE).
 
-You are free to use, modify, and share this software for any **non-commercial** purpose: personal use, hobby projects, education, research, and use inside non-profit, charitable, or government organizations. **Selling this software, or any product/service whose value depends on it, is not permitted.** For a commercial license, contact the author.
+You are free to use, modify, and share this software for any **non-commercial** purpose: personal use, hobby projects, education, research, and use inside non-profit, charitable, or government organizations. **Selling this software, or any product/service whose value depends on it, is not permitted.** For a commercial license, contact the author (see below).
+
+## Author & Contact
+
+Maintained by Batuhan Başar — [batuhanbsr.60@gmail.com](mailto:batuhanbsr.60@gmail.com).
+
+- **Bugs & feature requests:** open an issue on GitHub.
+- **Commercial licensing:** email the address above.
+- **General questions / contributions:** either an issue or an email works.
