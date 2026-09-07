@@ -4,8 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="highlight/github.min.css" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="highlight/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<link id="hl-light" rel="stylesheet" href="highlight/github.min.css">
+<link id="hl-dark" rel="stylesheet" href="highlight/github-dark.min.css">
+<script>
+(function(){
+  window.__appearance = 'system';
+  window.__applyAppearance = function(mode){
+    window.__appearance = mode;
+    var root = document.documentElement;
+    if (mode === 'light' || mode === 'dark') {
+      root.setAttribute('data-theme', mode);
+    } else {
+      root.removeAttribute('data-theme');
+    }
+    var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var isDark = mode === 'dark' || (mode !== 'light' && systemDark);
+    var light = document.getElementById('hl-light');
+    var dark = document.getElementById('hl-dark');
+    if (light) light.disabled = isDark;
+    if (dark) dark.disabled = !isDark;
+  };
+  window.__applyAppearance('system');
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+      if (window.__appearance === 'system') window.__applyAppearance('system');
+    });
+  } catch(e){}
+})();
+</script>
 </head>
 <body>
 <article class="markdown-body">

@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var activeID: String?
     @State private var scrollRequest: ScrollRequest?
     @State private var showSidebar: Bool = true
+    @AppStorage("appearance") private var appearance: String = "system"
 
     private struct ScrollRequest: Equatable {
         let id: String
@@ -35,7 +36,22 @@ struct ContentView: View {
                 }
                 .help("Toggle table of contents")
             }
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Picker("Appearance", selection: $appearance) {
+                        Label("System", systemImage: "circle.lefthalf.filled").tag("system")
+                        Label("Light", systemImage: "sun.max").tag("light")
+                        Label("Dark", systemImage: "moon").tag("dark")
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Image(systemName: appearanceIcon)
+                }
+                .help("Appearance")
+                .menuIndicator(.hidden)
+            }
         }
+        .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: rebuild)
         .onChange(of: document.text) { _, _ in rebuild() }
     }
@@ -76,11 +92,28 @@ struct ContentView: View {
             html: html,
             scrollToID: scrollRequest?.id,
             scrollNonce: scrollRequest?.nonce ?? 0,
+            appearance: appearance,
             onActiveHeadingChange: { id in
                 if activeID != id { activeID = id }
             }
         )
         .background(Color(NSColor.textBackgroundColor))
+    }
+
+    private var preferredColorScheme: ColorScheme? {
+        switch appearance {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil
+        }
+    }
+
+    private var appearanceIcon: String {
+        switch appearance {
+        case "light": return "sun.max"
+        case "dark":  return "moon"
+        default:      return "circle.lefthalf.filled"
+        }
     }
 
     private func rebuild() {

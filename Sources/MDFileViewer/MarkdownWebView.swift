@@ -4,6 +4,20 @@ import WebKit
 final class MarkdownWebCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     weak var webView: WKWebView?
     var onActiveHeadingChange: ((String) -> Void)?
+    var pendingAppearance: String = "system"
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        let js = "if (window.__applyAppearance) window.__applyAppearance(\(quoted(pendingAppearance)));"
+        webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    private func quoted(_ s: String) -> String {
+        if let data = try? JSONSerialization.data(withJSONObject: [s]),
+           let str = String(data: data, encoding: .utf8) {
+            return String(str.dropFirst().dropLast())
+        }
+        return "\"\""
+    }
 
     func webView(_ webView: WKWebView,
                  decidePolicyFor navigationAction: WKNavigationAction,
@@ -114,6 +128,7 @@ struct MarkdownWebView: NSViewRepresentable {
     let html: String
     var scrollToID: String?
     var scrollNonce: Int = 0
+    var appearance: String = "system"
     var onActiveHeadingChange: ((String) -> Void)?
 
     func makeCoordinator() -> MarkdownWebCoordinator { MarkdownWebCoordinator() }
@@ -135,16 +150,24 @@ struct MarkdownWebView: NSViewRepresentable {
         webView.setValue(false, forKey: "drawsBackground")
         context.coordinator.webView = webView
         context.coordinator.onActiveHeadingChange = onActiveHeadingChange
+        context.coordinator.pendingAppearance = appearance
         loadHTML(into: webView)
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.onActiveHeadingChange = onActiveHeadingChange
+        context.coordinator.pendingAppearance = appearance
         if context.coordinator.currentHTML != html {
             loadHTML(into: webView)
             context.coordinator.currentHTML = html
             context.coordinator.lastScrollNonce = 0
+            context.coordinator.appliedAppearance = nil
+        }
+        if context.coordinator.appliedAppearance != appearance {
+            context.coordinator.appliedAppearance = appearance
+            let js = "if (window.__applyAppearance) window.__applyAppearance(\(jsString(appearance)));"
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
         if let id = scrollToID, scrollNonce != context.coordinator.lastScrollNonce {
             context.coordinator.lastScrollNonce = scrollNonce
@@ -176,6 +199,7 @@ struct MarkdownWebView: NSViewRepresentable {
 extension MarkdownWebCoordinator {
     private static var currentHTMLKey: UInt8 = 0
     private static var lastScrollNonceKey: UInt8 = 0
+    private static var appliedAppearanceKey: UInt8 = 0
     var currentHTML: String? {
         get { objc_getAssociatedObject(self, &Self.currentHTMLKey) as? String }
         set { objc_setAssociatedObject(self, &Self.currentHTMLKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
@@ -183,5 +207,9 @@ extension MarkdownWebCoordinator {
     var lastScrollNonce: Int {
         get { (objc_getAssociatedObject(self, &Self.lastScrollNonceKey) as? Int) ?? 0 }
         set { objc_setAssociatedObject(self, &Self.lastScrollNonceKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+    var appliedAppearance: String? {
+        get { objc_getAssociatedObject(self, &Self.appliedAppearanceKey) as? String }
+        set { objc_setAssociatedObject(self, &Self.appliedAppearanceKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 }
