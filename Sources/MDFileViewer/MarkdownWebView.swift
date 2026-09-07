@@ -64,6 +64,7 @@ final class MarkdownWebCoordinator: NSObject, WKNavigationDelegate {
 struct MarkdownWebView: NSViewRepresentable {
     let html: String
     var scrollToID: String?
+    var scrollNonce: Int = 0
 
     func makeCoordinator() -> MarkdownWebCoordinator { MarkdownWebCoordinator() }
 
@@ -82,8 +83,10 @@ struct MarkdownWebView: NSViewRepresentable {
         if context.coordinator.currentHTML != html {
             loadHTML(into: webView)
             context.coordinator.currentHTML = html
+            context.coordinator.lastScrollNonce = 0
         }
-        if let id = scrollToID {
+        if let id = scrollToID, scrollNonce != context.coordinator.lastScrollNonce {
+            context.coordinator.lastScrollNonce = scrollNonce
             let js = "var el=document.getElementById(\(jsString(id))); if(el){el.scrollIntoView({behavior:'smooth', block:'start'});}"
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
@@ -106,8 +109,13 @@ struct MarkdownWebView: NSViewRepresentable {
 
 extension MarkdownWebCoordinator {
     private static var currentHTMLKey: UInt8 = 0
+    private static var lastScrollNonceKey: UInt8 = 0
     var currentHTML: String? {
         get { objc_getAssociatedObject(self, &Self.currentHTMLKey) as? String }
         set { objc_setAssociatedObject(self, &Self.currentHTMLKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+    var lastScrollNonce: Int {
+        get { (objc_getAssociatedObject(self, &Self.lastScrollNonceKey) as? Int) ?? 0 }
+        set { objc_setAssociatedObject(self, &Self.lastScrollNonceKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 }
