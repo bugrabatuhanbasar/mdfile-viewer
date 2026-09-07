@@ -1,0 +1,28 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+extension UTType {
+    static let markdown = UTType(importedAs: "net.daringfireball.markdown")
+}
+
+struct MarkdownDocument: FileDocument {
+    static var readableContentTypes: [UTType] = [.markdown, .plainText]
+
+    var text: String
+
+    init(text: String = "") {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents,
+              let raw = String(data: data, encoding: .utf8) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.text = raw
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        throw CocoaError(.featureUnsupported)
+    }
+}
