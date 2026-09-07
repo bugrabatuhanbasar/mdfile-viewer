@@ -93,7 +93,10 @@ final class MarkdownWebCoordinator: NSObject, WKNavigationDelegate, WKScriptMess
               }
             }
           }
-          if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+          if (el) {
+            el.scrollIntoView({behavior:'smooth', block:'start'});
+            if (window.__spySetCurrent) window.__spySetCurrent(el.id);
+          }
         })();
         """
         webView.evaluateJavaScript(js, completionHandler: nil)
@@ -121,6 +124,11 @@ private let scrollSpyScript = """
     current = id;
     try { window.webkit.messageHandlers.activeHeading.postMessage(id); } catch(e){}
   }
+  window.__spySetCurrent = function(id){
+    if (!id) return;
+    current = id;
+    try { window.webkit.messageHandlers.activeHeading.postMessage(id); } catch(e){}
+  };
   function update(){
     if (headings.length === 0) { headings = collect(); if (headings.length === 0) return; }
     var threshold = window.scrollY + Math.max(80, window.innerHeight * 0.2);
