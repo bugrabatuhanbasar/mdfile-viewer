@@ -5,7 +5,7 @@ struct ContentView: View {
 
     @State private var toc: [TOCItem] = []
     @State private var html: String = ""
-    @State private var selectedID: String?
+    @State private var activeID: String?
     @State private var scrollRequest: ScrollRequest?
     @State private var showSidebar: Bool = true
 
@@ -16,25 +16,45 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: .constant(showSidebar ? .all : .detailOnly)) {
-            List {
-                Section("Contents") {
-                    ForEach(toc) { item in
-                        TOCRow(item: item, isSelected: selectedID == item.id) {
-                            selectedID = item.id
-                            let nextNonce = (scrollRequest?.nonce ?? 0) &+ 1
-                            scrollRequest = ScrollRequest(id: item.id, nonce: nextNonce)
+            ScrollViewReader { proxy in
+                List {
+                    Section {
+                        ForEach(Array(toc.enumerated()), id: \.element.id) { index, item in
+                            TOCRow(item: item, isSelected: activeID == item.id) {
+                                activeID = item.id
+                                let nextNonce = (scrollRequest?.nonce ?? 0) &+ 1
+                                scrollRequest = ScrollRequest(id: item.id, nonce: nextNonce)
+                            }
+                            .padding(.top, index == 0 ? 8 : 0)
+                            .id(item.id)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                         }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    } header: {
+                        Text("Contents")
+                            .padding(.bottom, 4)
+                    }
+                }
+                .listStyle(.sidebar)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 360)
+                .onChange(of: activeID) { _, newID in
+                    guard let id = newID else { return }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        proxy.scrollTo(id, anchor: .center)
                     }
                 }
             }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 360)
         } detail: {
-            MarkdownWebView(html: html, scrollToID: scrollRequest?.id, scrollNonce: scrollRequest?.nonce ?? 0)
-                .background(Color(NSColor.textBackgroundColor))
+            MarkdownWebView(
+                html: html,
+                scrollToID: scrollRequest?.id,
+                scrollNonce: scrollRequest?.nonce ?? 0,
+                onActiveHeadingChange: { id in
+                    if activeID != id { activeID = id }
+                }
+            )
+            .background(Color(NSColor.textBackgroundColor))
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
@@ -54,6 +74,7 @@ struct ContentView: View {
         let result = MarkdownRenderer.render(document.text)
         self.toc = result.toc
         self.html = HTMLTemplate.wrap(body: result.html)
+        self.activeID = result.toc.first?.id
     }
 }
 
