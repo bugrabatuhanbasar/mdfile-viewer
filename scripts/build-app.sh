@@ -33,12 +33,7 @@ cp -R Sources/MDFileViewer/Resources/. "$APP_DIR/Contents/Resources/"
 ICON_SRC="assets/AppIcon.png"
 if [ -f "$ICON_SRC" ]; then
     echo "==> generating AppIcon.icns"
-    ICON_WORK="$(mktemp -d)"
-    ICON_FLAT="$ICON_WORK/AppIcon-flat.png"
-    # Flatten transparent corners onto the icon's own purple so no whiteness
-    # shows around it in Finder/Dock.
-    swift scripts/flatten-icon.swift "$ICON_SRC" "$ICON_FLAT" >/dev/null
-    ICONSET="$ICON_WORK/AppIcon.iconset"
+    ICONSET="$(mktemp -d)/AppIcon.iconset"
     mkdir -p "$ICONSET"
     for spec in \
         "16 icon_16x16.png" \
@@ -53,10 +48,10 @@ if [ -f "$ICON_SRC" ]; then
         "1024 icon_512x512@2x.png"; do
         size="${spec%% *}"
         name="${spec#* }"
-        sips -z "$size" "$size" "$ICON_FLAT" --out "$ICONSET/$name" >/dev/null
+        sips -z "$size" "$size" "$ICON_SRC" --out "$ICONSET/$name" >/dev/null
     done
     iconutil -c icns "$ICONSET" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
-    rm -rf "$ICON_WORK"
+    rm -rf "$(dirname "$ICONSET")"
 fi
 
 echo "==> ad-hoc codesign"
