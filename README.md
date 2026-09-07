@@ -121,4 +121,6 @@ Issues and pull requests are welcome. Some ideas that would make good first cont
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — see [LICENSE](LICENSE).
+
+You are free to use, modify, and share this software for any **non-commercial** purpose: personal use, hobby projects, education, research, and use inside non-profit, charitable, or government organizations. **Selling this software, or any product/service whose value depends on it, is not permitted.** For a commercial license, contact the author.
