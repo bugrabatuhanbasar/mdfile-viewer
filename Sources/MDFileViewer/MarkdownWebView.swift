@@ -161,6 +161,7 @@ struct MarkdownWebView: NSViewRepresentable {
     var scrollToID: String?
     var scrollNonce: Int = 0
     var appearance: String = "system"
+    var findController: FindController?
     var onActiveHeadingChange: ((String) -> Void)?
 
     func makeCoordinator() -> MarkdownWebCoordinator { MarkdownWebCoordinator() }
@@ -183,6 +184,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.webView = webView
         context.coordinator.onActiveHeadingChange = onActiveHeadingChange
         context.coordinator.pendingAppearance = appearance
+        findController?.webView = webView
         loadHTML(into: webView)
         return webView
     }
@@ -190,6 +192,9 @@ struct MarkdownWebView: NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.onActiveHeadingChange = onActiveHeadingChange
         context.coordinator.pendingAppearance = appearance
+        if findController?.webView !== webView {
+            findController?.webView = webView
+        }
         if context.coordinator.currentHTML != html {
             loadHTML(into: webView)
             context.coordinator.currentHTML = html

@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var scrollRequest: ScrollRequest?
     @State private var showSidebar: Bool = true
     @AppStorage("appearance") private var appearance: String = "system"
+    @StateObject private var findController = FindController()
 
     private struct ScrollRequest: Equatable {
         let id: String
@@ -54,6 +55,15 @@ struct ContentView: View {
         .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: rebuild)
         .onChange(of: document.text) { _, _ in rebuild() }
+        .onReceive(NotificationCenter.default.publisher(for: .mdToggleFind)) { _ in
+            findController.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .mdFindNext)) { _ in
+            if findController.isVisible { findController.findNext() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .mdFindPrevious)) { _ in
+            if findController.isVisible { findController.findPrevious() }
+        }
     }
 
     private var sidebar: some View {
@@ -93,11 +103,20 @@ struct ContentView: View {
             scrollToID: scrollRequest?.id,
             scrollNonce: scrollRequest?.nonce ?? 0,
             appearance: appearance,
+            findController: findController,
             onActiveHeadingChange: { id in
                 if activeID != id { activeID = id }
             }
         )
         .background(Color(NSColor.textBackgroundColor))
+        .overlay(alignment: .top) {
+            if findController.isVisible {
+                FindBar(controller: findController)
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: findController.isVisible)
     }
 
     private var preferredColorScheme: ColorScheme? {
